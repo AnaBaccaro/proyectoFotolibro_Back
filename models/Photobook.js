@@ -1,23 +1,51 @@
-const { Model, DataTypes } = require("sequelize");
-
-module.exports = (sequelize) => {
-  class Photobook extends Model {}
-
-  Photobook.init(
+module.exports = (sequelize, DataTypes) => {
+  const Photobook = sequelize.define(
+    "Photobook",
     {
-      title: DataTypes.STRING,
-      author: DataTypes.STRING,
-      country: DataTypes.STRING,
-      city: DataTypes.STRING,
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+
+      nombreFotografe: DataTypes.STRING,
+      apellidoFotografe: DataTypes.STRING,
+      titulo: DataTypes.STRING,
+      pais: DataTypes.STRING,
+      ciudad: DataTypes.STRING,
       editorial: DataTypes.STRING,
-      year: DataTypes.INTEGER,
-      image: DataTypes.STRING,
-      curated: DataTypes.BOOLEAN,
-      curatedOrder: DataTypes.INTEGER
+      ano: DataTypes.INTEGER,
+      texto: DataTypes.STRING,
+      diseno: DataTypes.STRING,
+      edicion: DataTypes.TEXT,
+      copias: DataTypes.STRING,
+      isbn: DataTypes.STRING,
+      paginas: DataTypes.INTEGER,
+      medidas: DataTypes.STRING,
+      idioma: DataTypes.STRING,
+      financiacion: DataTypes.STRING,
+      imprenta: DataTypes.STRING,
+      biblio: DataTypes.STRING,
+      comentarios: DataTypes.TEXT,
+      link: DataTypes.STRING,
+      imagen: DataTypes.STRING,
+
+      curated: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+
+      curatedOrder: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+
+      isFeatured: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
-      sequelize,
-      modelName: "Photobook",
       tableName: "photobooks",
       timestamps: false,
     }

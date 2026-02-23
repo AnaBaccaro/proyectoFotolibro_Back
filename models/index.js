@@ -1,18 +1,27 @@
-const { Sequelize } = require("sequelize");
+// models/index.js
+require("dotenv").config();
+const Sequelize = require("sequelize");
+const config = require("../config/config.js").development;
 
 const sequelize = new Sequelize(
-  "TU_DB",
-  "TU_USER",
-  "TU_PASSWORD",
+  config.database,
+  config.username,
+  config.password,
   {
-    host: "localhost",
-    dialect: "mysql",
+    host: config.host,
+    port: config.port,
+    dialect: config.dialect,
+    logging: false,
   }
 );
 
-const Photobook = require("./Photobook")(sequelize);
+// Importar modelos (PASANDO Sequelize)
+const Photobook = require("./Photobook")(sequelize, Sequelize);
+const Author = require("./Author")(sequelize, Sequelize);
 
 module.exports = {
   sequelize,
+  Sequelize,
   Photobook,
+  Author,
 };

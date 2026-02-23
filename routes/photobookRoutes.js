@@ -5,19 +5,14 @@ const {
   getAll,
   getLatest,
   getCurated,
-  search
+  search,
+  getById,
 } = require("../controllers/photobookController");
 
-// buscador
 router.get("/buscar", search);
-
-// Curaduría editorial
 router.get("/curated", getCurated);
-
-// Novedades
 router.get("/latest", getLatest);
-
-// Todos
+router.get("/:id", getById);
 router.get("/", getAll);
 
 module.exports = router;

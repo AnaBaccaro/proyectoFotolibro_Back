@@ -1,8 +1,21 @@
-const { Photobook } = require("../models");
-const photobooksRaw = require("../data/photobooks_argentina_clean.json");
+const { Photobook, sequelize } = require("../models");
+const photobooksData = require("../data/photobooks_argentina_clean.json");
 
-async function seedPhotobooks() {
-  const formattedPhotobooks = photobooksRaw.map((item) => ({
+// ⭐ Títulos que querés marcar como novedades
+const FEATURED_TITLES = [
+  "La Ausencia",
+  "Las Batallas de Monte Chingolo",
+  "La Quinta Copia",
+];
+
+async function runSeed() {
+  await sequelize.sync({ alter: true });
+  console.log("Base sincronizada");
+
+  await Photobook.destroy({ where: {} });
+  console.log("Tabla photobooks limpiada");
+
+  const rows = photobooksData.map((item) => ({
     nombreFotografe: item["Nombre fotógrafe"] || null,
     apellidoFotografe: item["Apellido fotógrafe"] || null,
     titulo: item["Título"] || null,
@@ -24,12 +37,17 @@ async function seedPhotobooks() {
     comentarios: item["Comentarios"] || null,
     link: item["Link"] || null,
     imagen: item["Imagen"] || null,
+
     curated: item["Curated"] || false,
     curatedOrder: item["CuratedOrder"] || null,
+
+    isFeatured: FEATURED_TITLES.includes(item["Título"]),
   }));
 
-  await Photobook.bulkCreate(formattedPhotobooks);
-  console.log("Photobooks seeded correctamente!");
+  await Photobook.bulkCreate(rows);
+
+  console.log("Photobooks insertados correctamente");
+  process.exit();
 }
 
-module.exports = seedPhotobooks;
+runSeed();

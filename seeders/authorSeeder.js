@@ -1,3 +1,4 @@
+// seeders/authorSeeder.js
 const { Author } = require("../models");
 
 module.exports = async () => {
@@ -10,5 +11,5 @@ module.exports = async () => {
     { author_name: "Alicia", author_lastname: "D'Amico", country: "Argentina" },
   ]);
 
-  console.log("👩‍🎨 Autores creados");
+  console.log("Autores creados");
 };

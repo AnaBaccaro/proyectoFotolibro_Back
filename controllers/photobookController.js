@@ -1,76 +1,57 @@
-const { Photobook } = require("../models");
+const photobooksRaw = require("../data/photobooks_argentina_clean.json");
 
-// ---------- ALL ----------
+const hasValidImage = (b) => {
+  const img = b.Imagen;
+  return typeof img === "string" && img.trim().length > 0 && img !== "null";
+};
+
+const photobooks = photobooksRaw.map((b, i) => ({
+  id: i + 1,
+  ...b,
+}));
+
 exports.getAll = async (req, res) => {
-  try {
-    const books = await Photobook.findAll({
-      order: [["id", "ASC"]],
-    });
-    res.json(books);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json(photobooks.filter(hasValidImage));
 };
 
-// ---------- SINGLE ----------
 exports.getById = async (req, res) => {
-  try {
-    const book = await Photobook.findByPk(req.params.id);
+  const id = Number(req.params.id);
 
-    if (!book) {
-      return res.status(404).json({ error: "Fotolibro no encontrado" });
-    }
-
-    res.json(book);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (!Number.isInteger(id) || id < 1 || id > photobooks.length) {
+    return res.status(404).json({ error: "Fotolibro no encontrado" });
   }
+
+  res.json(photobooks[id - 1]);
 };
 
-// ---------- LATEST ----------
 exports.getLatest = async (req, res) => {
-  try {
-    const books = await Photobook.findAll({
-      limit: 3,
-      order: [["id", "DESC"]],
-    });
-    res.json(books);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const latest = photobooks.filter(hasValidImage).slice(-3).reverse();
+  res.json(latest);
 };
 
-// ---------- CURATED ----------
 exports.getCurated = async (req, res) => {
-  try {
-    const books = await Photobook.findAll({
-      where: { curated: true },
-      order: [["curatedOrder", "ASC"]],
-      limit: 10,
-    });
-    res.json(books);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const curated = photobooks
+    .filter((b) => b.Curated === true && hasValidImage(b))
+    .sort((a, b) => (a.CuratedOrder ?? 999999) - (b.CuratedOrder ?? 999999))
+    .slice(0, 10);
+
+  res.json(curated);
 };
 
-// ---------- SEARCH ----------
 exports.search = async (req, res) => {
   const q = (req.query.q || "").toLowerCase();
-
   if (!q) return res.json([]);
 
-  try {
-    const books = await Photobook.findAll();
+  const results = photobooks
+    .filter(hasValidImage)
+    .filter((b) => {
+      const title = (b["Título"] || "").toLowerCase();
+      const author = `${b["Nombre fotógrafe"] || ""} ${b["Apellido fotógrafe"] || ""}`.toLowerCase();
+      const country = (b["País"] || "").toLowerCase();
+      const editorial = (b["Editorial"] || "").toLowerCase();
 
-    const results = books.filter((b) =>
-      `${b.title} ${b.author} ${b.country} ${b.editorial}`
-        .toLowerCase()
-        .includes(q)
-    );
+      return `${title} ${author} ${country} ${editorial}`.includes(q);
+    });
 
-    res.json(results.slice(0, 20));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json(results.slice(0, 20));
 };

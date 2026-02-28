@@ -11,11 +11,7 @@ app.use(
 );
 
 app.use(express.json());
-
-// Servir imágenes desde /public/img
 app.use("/img", express.static("public/img"));
-
-// Rutas de fotolibros
 app.use("/fotolibros", photobookRoutes);
 
 const PORT = 3001;

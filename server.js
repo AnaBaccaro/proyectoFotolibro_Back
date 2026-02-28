@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const photobookRoutes = require("./routes/photobookRoutes");
 
 const app = express();
@@ -11,7 +12,7 @@ app.use(
 );
 
 app.use(express.json());
-app.use("/img", express.static("public/img"));
+app.use("/img", express.static(path.join(__dirname, "public", "img")));
 app.use("/fotolibros", photobookRoutes);
 
 const PORT = 3001;

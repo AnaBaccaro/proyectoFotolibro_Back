@@ -1,8 +1,25 @@
 const photobooksRaw = require("../data/photobooks_argentina_clean.json");
 
 const hasValidImage = (b) => {
-  const img = b.Imagen;
-  return typeof img === "string" && img.trim().length > 0 && img !== "null";
+  const img = (b?.Imagen ?? "").toString().trim();
+  return img.length > 0 && img.toLowerCase() !== "null" && img.toLowerCase() !== "undefined";
+};
+
+const truthy = (v) => {
+  if (v === true) return true;
+  if (typeof v === "number") return v === 1;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes" || s === "y" || s === "si" || s === "sí";
+  }
+  return false;
+};
+
+const getField = (b, key) => {
+  if (!b || typeof b !== "object") return undefined;
+  if (Object.prototype.hasOwnProperty.call(b, key)) return b[key];
+  const foundKey = Object.keys(b).find((k) => k.trim().toLowerCase() === key.trim().toLowerCase());
+  return foundKey ? b[foundKey] : undefined;
 };
 
 const photobooks = photobooksRaw.map((b, i) => ({
@@ -11,7 +28,7 @@ const photobooks = photobooksRaw.map((b, i) => ({
 }));
 
 exports.getAll = async (req, res) => {
-  res.json(photobooks.filter(hasValidImage));
+  res.json(photobooks);
 };
 
 exports.getById = async (req, res) => {
@@ -31,9 +48,9 @@ exports.getLatest = async (req, res) => {
 
 exports.getCurated = async (req, res) => {
   const curated = photobooks
-    .filter((b) => b.Curated === true && hasValidImage(b))
-    .sort((a, b) => (a.CuratedOrder ?? 999999) - (b.CuratedOrder ?? 999999))
-    .slice(0, 10);
+    .filter((b) => truthy(getField(b, "Curated")) && hasValidImage(b))
+    .sort((a, b) => (Number(getField(a, "CuratedOrder")) || 999999) - (Number(getField(b, "CuratedOrder")) || 999999))
+    .slice(0, 9);
 
   res.json(curated);
 };
@@ -43,12 +60,13 @@ exports.search = async (req, res) => {
   if (!q) return res.json([]);
 
   const results = photobooks
-    .filter(hasValidImage)
     .filter((b) => {
-      const title = (b["Título"] || "").toLowerCase();
-      const author = `${b["Nombre fotógrafe"] || ""} ${b["Apellido fotógrafe"] || ""}`.toLowerCase();
-      const country = (b["País"] || "").toLowerCase();
-      const editorial = (b["Editorial"] || "").toLowerCase();
+      const title = (getField(b, "Título") ?? getField(b, "Titulo") ?? "").toString().toLowerCase();
+      const first = (getField(b, "Nombre fotógrafe") ?? getField(b, "Nombre fotografe") ?? "").toString();
+      const last = (getField(b, "Apellido fotógrafe") ?? getField(b, "Apellido fotografe") ?? "").toString();
+      const author = `${first} ${last}`.toLowerCase();
+      const country = (getField(b, "País") ?? getField(b, "Pais") ?? "").toString().toLowerCase();
+      const editorial = (getField(b, "Editorial") ?? "").toString().toLowerCase();
 
       return `${title} ${author} ${country} ${editorial}`.includes(q);
     });

@@ -4,21 +4,12 @@ const path = require("path");
 
 const IMG_DIR = path.join(__dirname, "..", "public", "img");
 
-const normalizeName = (s) =>
-  (s || "")
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize("NFC");
-
-const stripExt = (filename) => filename.replace(/\.[^/.]+$/, "");
-
 const truthy = (v) => {
   if (v === true) return true;
   if (typeof v === "number") return v === 1;
   if (typeof v === "string") {
     const s = v.trim().toLowerCase();
-    return s === "true" || s === "1" || s === "yes" || s === "y" || s === "si" || s === "sí" || s === "true";
+    return s === "true" || s === "1" || s === "yes" || s === "y" || s === "si" || s === "sí";
   }
   return false;
 };
@@ -32,47 +23,67 @@ const getField = (b, key) => {
   return foundKey ? b[foundKey] : undefined;
 };
 
-const normalizeImagen = (b) => {
-  const img = (getField(b, "Imagen") ?? "").toString().trim();
-  if (!img) return "";
-  const low = img.toLowerCase();
+const norm = (v) =>
+  (v ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const normalizeName = (s) => (s || "").toString().trim().toLowerCase().normalize("NFC");
+
+const stripExt = (filename) => filename.replace(/\.[^/.]+$/, "");
+
+const resolveRealImageName = (imgName, files) => {
+  const raw = (imgName ?? "").toString().trim();
+  if (!raw) return "";
+
+  const low = raw.toLowerCase();
   if (low === "null" || low === "undefined") return "";
-  return img;
+
+  const base = normalizeName(stripExt(raw));
+  const match = files.find((f) => normalizeName(stripExt(f)) === base);
+  return match || "";
 };
 
-const imageExistsFlexible = (imgName) => {
-  const name = (imgName ?? "").toString().trim();
-  if (!name) return false;
-
-  const requestedBase = normalizeName(stripExt(name));
-
-  let files = [];
+const imgFiles = (() => {
   try {
-    files = fs.readdirSync(IMG_DIR);
+    return fs.readdirSync(IMG_DIR);
   } catch {
-    return false;
+    return [];
+  }
+})();
+
+const photobooks = photobooksRaw.map((b, i) => {
+  const resolved = resolveRealImageName(getField(b, "Imagen"), imgFiles);
+
+  return {
+    id: i + 1,
+    ...b,
+    Imagen: resolved,
+  };
+});
+
+const hasRealImage = (b) => {
+  const img = (b?.Imagen ?? "").toString().trim();
+  return img.length > 0;
+};
+
+const parseTags = (b) => {
+  const raw = getField(b, "Tags") ?? getField(b, "tags") ?? getField(b, "Tag") ?? getField(b, "tag") ?? "";
+
+  if (Array.isArray(raw)) {
+    return raw.map((t) => (t ?? "").toString().trim()).filter(Boolean);
   }
 
-  return files.some((f) => normalizeName(stripExt(f)) === requestedBase);
+  const s = (raw ?? "").toString().trim();
+  if (!s) return [];
+  return s
+    .split(/[,;\n]/g)
+    .map((t) => t.trim())
+    .filter(Boolean);
 };
-
-const photobooks = photobooksRaw.map((b, i) => ({
-  id: i + 1,
-  ...b,
-  // Normalizamos algunos campos clave para que el front no dependa de tildes
-  Imagen: normalizeImagen(b),
-  Titulo:
-    (getField(b, "Titulo") ?? getField(b, "Título") ?? "").toString().trim(),
-  Pais: (getField(b, "Pais") ?? getField(b, "País") ?? "").toString().trim(),
-  NombreFotografe:
-    (getField(b, "Nombre fotografe") ??
-      getField(b, "Nombre fotógrafe") ??
-      "").toString().trim(),
-  ApellidoFotografe:
-    (getField(b, "Apellido fotografe") ??
-      getField(b, "Apellido fotógrafe") ??
-      "").toString().trim(),
-}));
 
 exports.getAll = async (req, res) => {
   res.json(photobooks);
@@ -89,19 +100,13 @@ exports.getById = async (req, res) => {
 };
 
 exports.getLatest = async (req, res) => {
-  // Últimos 3 que tengan imagen REAL (archivo existente en public/img),
-  // ignorando extensión y mayúsculas/minúsculas.
-  const latest = photobooks
-    .filter((b) => imageExistsFlexible(b.Imagen))
-    .slice(-3)
-    .reverse();
-
+  const latest = photobooks.filter(hasRealImage).slice(-3).reverse();
   res.json(latest);
 };
 
 exports.getCurated = async (req, res) => {
   const curated = photobooks
-    .filter((b) => truthy(getField(b, "Curated")) && imageExistsFlexible(b.Imagen))
+    .filter((b) => truthy(getField(b, "Curated")) && hasRealImage(b))
     .sort(
       (a, b) =>
         (Number(getField(a, "CuratedOrder")) || 999999) -
@@ -113,17 +118,23 @@ exports.getCurated = async (req, res) => {
 };
 
 exports.search = async (req, res) => {
-  const q = (req.query.q || "").toLowerCase();
+  const q = norm(req.query.q || "");
   if (!q) return res.json([]);
 
   const results = photobooks.filter((b) => {
-    const title = (b.Titulo || "").toLowerCase();
-    const author = `${b.NombreFotografe || ""} ${b.ApellidoFotografe || ""}`.toLowerCase();
-    const country = (b.Pais || "").toLowerCase();
-    const editorial = (getField(b, "Editorial") ?? "").toString().toLowerCase();
+    const title = getField(b, "Titulo") ?? getField(b, "Título") ?? "";
+    const first = getField(b, "Nombre fotografe") ?? getField(b, "Nombre fotógrafe") ?? "";
+    const last = getField(b, "Apellido fotografe") ?? getField(b, "Apellido fotógrafe") ?? "";
+    const author = `${first} ${last}`.trim();
 
-    return `${title} ${author} ${country} ${editorial}`.includes(q);
+    const country = getField(b, "Pais") ?? getField(b, "País") ?? "";
+    const city = getField(b, "Ciudad") ?? "";
+    const editorial = getField(b, "Editorial") ?? "";
+    const tags = parseTags(b).join(" ");
+
+    const haystack = norm(`${title} ${author} ${country} ${city} ${editorial} ${tags}`);
+    return haystack.includes(q);
   });
 
-  res.json(results.slice(0, 20));
+  res.json(results.slice(0, 50));
 };

@@ -619,7 +619,7 @@
     "Comentarios": "",
     "Link": "",
     "Imagen": "todo_nada_2023.png",
-    "Tags": "Retrato, relación, pareja, colaboración, Argentina, amor",
+    "Tags": ["retrato", "relación", "pareja", "colaboración", "argentina", "amor"],
     "Curated": "TRUE",
     "CuratedOrder": "4"
   },
@@ -4311,7 +4311,7 @@
     "Comentarios": "1 ed",
     "Link": "",
     "Imagen": "",
-    "Tags": "",
+    "Tags": ["campo", "rural", "niñas", "gaucho", "argentina", "pampa"],
     "Curated": "",
     "CuratedOrder": ""
   },
@@ -12059,7 +12059,7 @@
     "Comentarios": "",
     "Link": "",
     "Imagen": "nuestros_codigos_2023.png",
-    "Tags": "",
+    "Tags": ["trans", "LGTB+", "memoria", "archivo", "argentina"],
     "Curated": "TRUE",
     "CuratedOrder": "3"
   },
